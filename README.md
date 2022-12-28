@@ -29,5 +29,84 @@ Ejemplo:
 pm2 start ./miservidor.js -- --port=8080 --modo=fork
 pm2 start ./miservidor.js -- --port=8081 --modo=cluster
 pm2 start ./miservidor.js -- --port=8082 --modo=fork
-...
+
+
+## RESOLUCIÓN:
+
+>> Decidí usar directamente PM2 ya que podemos decidir si iniciarlo en modo FORK o en modo CLUSTER cuando ponemos a correr el servidor (con "-i max" cluster y sin "-i max" fork)
+
+## IMPORTANTE: PONER LOS COMANDOS EN CMD Y NO EN POWERSHELL, SINO NO FUNCA
+
+// PARA INICIAR SERVIDOR EN MODO FORK:
+$ pm2 start server.js --name="ServerFork" --watch -- -- 8081
+
+
+// INICIAR SERVIDORES MODO CLUSTER
+$ pm2 start server.js --name="ServerCluster1" --watch -i max -- -- 8082
+
+$ pm2 start server.js --name="ServerCluster2" --watch -i max -- -- 8083
+
+$ pm2 start server.js --name="ServerCluster3" --watch -i max -- -- 8084
+
+>> Comprobamos la lista
+$ pm2 list
+
+>> Debería figurar lo siguiente en consola:
+
+┌─────┬───────────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id  │ name              │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │     
+├─────┼───────────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤     
+│ 5   │ ServerCluster1    │ default     │ 1.0.0   │ cluster │ 5628     │ 35s    │ 4    │ online    │ 0%       │ 131.2mb  │ inft11   │ enabled  │     
+│ 6   │ ServerCluster1    │ default     │ 1.0.0   │ cluster │ 7540     │ 35s    │ 4    │ online    │ 0%       │ 97.7mb   │ inft11   │ enabled  │     
+│ 7   │ ServerCluster1    │ default     │ 1.0.0   │ cluster │ 12912    │ 33s    │ 4    │ online    │ 0%       │ 96.8mb   │ inft11   │ enabled  │     
+│ 8   │ ServerCluster1    │ default     │ 1.0.0   │ cluster │ 4276     │ 33s    │ 4    │ online    │ 0%       │ 97.3mb   │ inft11   │ enabled  │     
+│ 9   │ ServerCluster2    │ default     │ 1.0.0   │ cluster │ 2144     │ 13s    │ 0    │ online    │ 0%       │ 130.9mb  │ inft11   │ enabled  │     
+│ 10  │ ServerCluster2    │ default     │ 1.0.0   │ cluster │ 4376     │ 13s    │ 0    │ online    │ 0%       │ 130.7mb  │ inft11   │ enabled  │     
+│ 11  │ ServerCluster2    │ default     │ 1.0.0   │ cluster │ 11068    │ 13s    │ 0    │ online    │ 0%       │ 130.5mb  │ inft11   │ enabled  │     
+│ 12  │ ServerCluster2    │ default     │ 1.0.0   │ cluster │ 12768    │ 12s    │ 0    │ online    │ 0%       │ 130.4mb  │ inft11   │ enabled  │     
+│ 13  │ ServerCluster3    │ default     │ 1.0.0   │ cluster │ 6524     │ 3s     │ 0    │ online    │ 90.6%    │ 103.7mb  │ inft11   │ enabled  │     
+│ 14  │ ServerCluster3    │ default     │ 1.0.0   │ cluster │ 10804    │ 3s     │ 0    │ online    │ 107.9%   │ 103.3mb  │ inft11   │ enabled  │     
+│ 15  │ ServerCluster3    │ default     │ 1.0.0   │ cluster │ 13032    │ 3s     │ 0    │ online    │ 114.1%   │ 100.3mb  │ inft11   │ enabled  │     
+│ 16  │ ServerCluster3    │ default     │ 1.0.0   │ cluster │ 12352    │ 3s     │ 0    │ online    │ 110.9%   │ 94.6mb   │ inft11   │ enabled  │     
+│ 0   │ ServerFork1       │ default     │ 1.0.0   │ fork    │ 1952     │ 35s    │ 4    │ online    │ 0%       │ 96.8mb   │ inft11   │ enabled  │     
+└─────┴───────────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+
+>> Editamos nuestro archivo de configuración de Nginx para redirigir las consultas a /api/randoms a un cluster de los que creamos anteriormente:
+
+events {
+}
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    upstream node_app {
+        server 127.0.0.1:8082;
+        server 127.0.0.1:8083;
+        server 127.0.0.1:8084;
+    }
+
+    server {
+        listen       8080;
+        server_name  nginx_node;
+
+        location /api/randoms {
+            proxy_pass http://node_app/api/random;
+        }
+    }
+}
+
+//////////////////
+
+Nos paramos en la carpeta del servidor descargado de Nginx, escribimos CMD
+
+$ start nginx
+$ tasklist /fi "imagename eq nginx.exe" --> verificamos que se hayan iniciado los procesos
+
+
+
+
+
+
+
 
